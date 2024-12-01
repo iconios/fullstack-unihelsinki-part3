@@ -6,7 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "build:ui": "@powershell Remove-Item -Recurse -Force dist && cd C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part2/phonebook && npm run build && @powershell cmd /c C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part2/phonebook/dist -Recurse C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part3-phonebook-backend",
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
   },
   "keywords": [
     "Phonebook",
@@ -23,6 +25,7 @@
     "morgan": "^1.10.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.7",
+    "shx": "^0.3.4"
   }
 }

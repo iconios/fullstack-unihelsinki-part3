@@ -32,7 +32,7 @@ app.use(cors());
 
 morgan.token('body', (req) => JSON.stringify(req.body));
 morgan.token('date', (req)=> new Date());
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body :date'));
+//app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body :date'));
 
 app.use(express.json());
 
@@ -53,7 +53,7 @@ app.get('/api/persons/:id', (request, response) => {
     else response.status(404).send('Person not found');
 })
 
-app.post('/api/persons', (request, response) => {
+app.post('/api/persons', morgan(':method :url :status :res[content-length] - :response-time ms :body :date'), (request, response) => {
     const body = request.body;    
     console.log('New person content ', body);
 
