@@ -1,4 +1,5 @@
 
+const cors = require('cors');
 const express = require('express');
 const morgan = require('morgan');
 const app = express();
@@ -26,8 +27,11 @@ let persons = [
     }
 ]
 
+app.use(cors());
+
 morgan.token('body', (req) => JSON.stringify(req.body));
-app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'));
+morgan.token('date', (req)=> new Date());
+app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body :date'));
 
 app.use(express.json());
 
@@ -53,7 +57,7 @@ app.post('/api/persons', (request, response) => {
     console.log('New person content ', body);
 
     const generateID = () => {
-        return Math.floor(Math.random() * 10000) + 5;
+        return String(Math.floor(Math.random() * 10000) + 5);
     } 
     const alreadyPerson = persons.find(person=> person.name === body.name)
     
@@ -76,10 +80,28 @@ app.post('/api/persons', (request, response) => {
     if(!alreadyPerson && body.name && body.number) {
         body.id = generateID();
         persons = persons.concat(body);
-        return response.status(200).json(persons);
+        return response.status(200).json(body);
     }    
     
 })
+
+app.delete('/api/persons/:id', (request, response) => {
+    const id = request.params.id;
+    if(id) {
+        const delPerson = persons.find(person=> person.id === id);
+        console.log('Person to remove ', delPerson);
+        if(delPerson){
+            persons = persons.filter(person=> person.id !== id)
+            return response.status(200).end();
+        }
+        else {
+            return response.status(404).end();
+        }
+    }
+    else {
+        return response.status(404).end();
+    }
+});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, ()=>{
