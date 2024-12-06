@@ -1,110 +1,143 @@
+const Person = require('./models/person')
+const cors = require('cors')
+const express = require('express')
+const morgan = require('morgan')
+const app = express()
 
-const cors = require('cors');
-const express = require('express');
-const morgan = require('morgan');
-const app = express();
+function errorHandler(error, request, response, next) {
+  console.error('Error message ', error.message)
 
-let persons = [
-    { 
-      "id": "1",
-      "name": "Arto Hellas", 
-      "number": "040-123456"
-    },
-    { 
-      "id": "2",
-      "name": "Ada Lovelace", 
-      "number": "39-44-5323523"
-    },
-    { 
-      "id": "3",
-      "name": "Dan Abramov", 
-      "number": "12-43-234345"
-    },
-    { 
-      "id": "4",
-      "name": "Mary Poppendieck", 
-      "number": "39-23-6423122"
-    }
-]
+  if(error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
 
-app.use(express.static('dist'));
-app.use(cors());
+  next(error)
+}
 
-morgan.token('body', (req) => JSON.stringify(req.body));
-morgan.token('date', (req)=> new Date());
-//app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body :date'));
+app.use(express.static('dist'))
+app.use(cors())
 
-app.use(express.json());
+morgan.token('body', (req) => JSON.stringify(req.body))
+morgan.token('date', () => new Date())
+
+app.use(express.json())
 
 app.get('/api/persons', (request, response) => {
-    response.status(200).send(persons);
-});
+  Person.find({}).then(persons => {
+    response.status(200).json(persons)
+  })
+})
 
 app.get('/info', (request, response) => {
-    response.status(200).send(`<div><p>Phonebook has info for ${persons.length} people</p><p>${new Date()}</p></div>`);
-});
-
-app.get('/api/persons/:id', (request, response) => {
-    const id = request.params.id;
-    const person = persons.find(person => person.id === id);
-    if(person) {
-        response.status(200).json(person);
-    }
-    else response.status(404).send('Person not found');
+  Person
+    .find({})
+    .then(result => {
+      response.status(200).setHeader('content-type', 'text/html').send(`<div><p>Phonebook has info for ${result.length} people</p><p>${new Date()}</p></div>`)
+    })
 })
 
-app.post('/api/persons', morgan(':method :url :status :res[content-length] - :response-time ms :body :date'), (request, response) => {
-    const body = request.body;    
-    console.log('New person content ', body);
-
-    const generateID = () => {
-        return String(Math.floor(Math.random() * 10000) + 5);
-    } 
-    const alreadyPerson = persons.find(person=> person.name === body.name)
-    
-    if(alreadyPerson){
-        return response.status(400).end('Person must be unique')
-    }
-
-    if(!body) {
-        return response.status(400).end('Error. No data received')
-    }
-
-    if(!body.name) {
-        return response.status(400).end('The name cannot be empty')
-    }
-
-    if(!body.number) {
-        return response.status(400).end('The number cannot be empty')
-    }
-
-    if(!alreadyPerson && body.name && body.number) {
-        body.id = generateID();
-        persons = persons.concat(body);
-        return response.status(200).json(body);
-    }    
-    
+app.get('/api/persons/:id', (request, response, next) => {
+  const id = request.params.id
+  console.log('ID received for post ', id)
+  Person
+    .findById(id)
+    .then(result => {
+      console.log('Person received from db ', result)
+      return response.status(200).json(result)
+    })
+    .catch(error => {
+      console.log('Error message from db ', error.message)
+      next(error)
+    })
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-    const id = request.params.id;
-    if(id) {
-        const delPerson = persons.find(person=> person.id === id);
-        console.log('Person to remove ', delPerson);
-        if(delPerson){
-            persons = persons.filter(person=> person.id !== id)
-            return response.status(200).end();
+app.post('/api/persons', morgan(':method :url :status :res[content-length] - :response-time ms :body :date'), (request, response, next) => {
+  const body = request.body
+  console.log('New person content ', body)
+  const name = body.name
+  const number = body.number
+  if(body){
+    Person
+      .findOne({ 'name': name })
+      .then(result => {
+        if(result){
+          return response.status(400).json({ 'error': 'Person must be unique' })
+        }
+
+        if(!result && name && number){
+          const person = new Person({
+            name,
+            number,
+          })
+          person
+            .save()
+            .then(result => {
+              console.log('Person saved ', result)
+              return response.status(200).json(person)
+            })
+            .catch(error => {
+              console.log('Saving error ', error.message)
+              next(error)
+            })
         }
         else {
-            return response.status(404).end();
+          return response.status(400).json({ 'error':'Name and or number cannot be empty' })
         }
-    }
-    else {
-        return response.status(404).end();
-    }
-});
+      })
+      .catch(error => {
+        next(error)
+      })
+  }
+  else {
+    return response.status(400).json({ 'error': 'No data received' })
+  }
+})
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, ()=>{
-    console.log(`Server running on port ${PORT}`)
-});
+app.delete('/api/persons/:id', (request, response, next) => {
+  const id = request.params.id
+  if(id) {
+    Person
+      .findByIdAndDelete(id)
+      .then(result => {
+        console.log('Found and deleted ', result)
+        return response.status(200).end()
+      })
+      .catch(error => {
+        console.log('Unsuccessful deletion ', error.message)
+        next(error)
+      })
+  }
+  else {
+    return response.status(404).end()
+  }
+})
+
+app.put('/api/persons/:id', morgan(':method :url :status :res[content-length] - :response-time ms :body :date'), (request, response, next) => {
+  const id = request.params.id
+  const body = request.body
+  console.log('Details received from frontend ', body)
+  const name = body.name
+  const number = body.number
+  if(id && name && number) {
+    Person
+      .findOneAndUpdate({ _id: id }, { name, number }, { new: true, runValidators: true })
+      .then(result => {
+        console.log('Result from db ', result)
+        return response.status(200).json(result)
+      })
+      .catch(error => {
+        next(error)
+        return response.status(400).end()
+      })
+  }
+  else return response.status(400).end()
+})
+
+app.use(errorHandler)
+
+const PORT = process.env.PORT || 3001
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`)
+})

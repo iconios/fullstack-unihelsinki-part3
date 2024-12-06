@@ -8,7 +8,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "build:ui": "@powershell Remove-Item -Recurse -Force dist && cd C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part2/phonebook && npm run build && @powershell cmd /c C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part2/phonebook/dist -Recurse C:/Users/hp/OneDrive/Desktop/Programming Projects/fullstackopen/part3-phonebook-backend",
-    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push"
+    "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push",
+    "lint": "eslint ."
   },
   "keywords": [
     "Phonebook",
@@ -21,10 +22,16 @@
   "license": "ISC",
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.21.1",
+    "mongoose": "^8.8.3",
     "morgan": "^1.10.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.16.0",
+    "@stylistic/eslint-plugin-js": "^2.11.0",
+    "eslint": "^9.16.0",
+    "globals": "^15.13.0",
     "nodemon": "^3.1.7",
     "shx": "^0.3.4"
   }
